@@ -94,7 +94,7 @@ retention <- eligible_outcome %>%
     by = c("CNTRY", "EDU_SYSTEM_NAME")
   ) %>%
   mutate(
-    Analytic_N = tidyr::replace_na(Analytic_N, 0L),
+    Analytic_N = ifelse(is.na(Analytic_N), 0L, Analytic_N),
     Retention_pct = 100 * Analytic_N / Eligible_N
   ) %>%
   rename(Code = CNTRY, `Education system` = EDU_SYSTEM_NAME)
