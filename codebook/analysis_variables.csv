@@ -1,0 +1,25 @@
+Variable,Type,Description,Format,Coding_or_use
+CNTRY,Original,Education-system code,String,
+EDU_SYSTEM_NAME,Derived,Readable education-system name,String,Derived from CNTRY
+IDCNTRY,Original,Numeric country/system identifier,Integer,
+IDPOP,Original,TALIS target population,Integer,All retained rows are 2 (ISCED 2)
+IDSCHOOL,Original,School identifier,Integer,
+IDTEACH,Original,Teacher identifier,Integer,
+IDTQUEST,Original,Teacher questionnaire form,Integer,Retained forms 2=B and 3=C
+T4SESEN,Original derived scale,Self-efficacy in special education needs,Numeric,Primary outcome
+TT4G21K,Original,Professional learning included teaching students with SEN,Integer,"1=Yes, 2=No; routed values are blank in original"
+SEN_PL,Derived,Analysis-ready SEN-focused professional-learning indicator,Integer,"1=Yes; 0=No. Routed teachers with no PL activity in TT4G20A-J are recoded to 0"
+SEN_PL_ROUTED_ZERO,Derived,Flag for routing-based recode of SEN_PL,Integer,"1=TT4G21K missing and all TT4G20A-J=4; SEN_PL set to 0"
+TT4G24K,Original,Current need for PL in teaching students with SEN,Integer,"1=None, 2=Low, 3=Moderate, 4=High"
+HIGH_SEN_PL_NEED,Derived,High SEN-related PL need,Integer,"1=TT4G24K=4; 0=TT4G24K=1-3; missing if TT4G24K missing"
+NEED_PL_PROFILE,Derived,Cross-classification of high need and SEN-focused PL,String,Four groups; missing when TT4G24K missing
+NEED_PROFILE_ELIGIBLE,Derived,Eligibility for need/profile analysis,Integer,"1=TT4G24K observed; 0=missing"
+T4TYEXPTT,Original derived categorical,Total teaching-experience category,Integer,Covariate
+T4TCSIZE,Original derived categorical,Target-class size category,Integer,Covariate
+TT4G47E,Original,Proportion/category of students with SEN in target class,Integer,Covariate
+T4SELF,Original derived scale,General teacher self-efficacy,Numeric,Sensitivity-analysis covariate
+TT4G01,Original,Teacher gender,Integer,Sensitivity-analysis covariate where available
+T4THEDAT,Original derived categorical,Highest educational attainment,Integer,Sensitivity-analysis covariate where available
+TCHWGT,Original weight,Final teacher sampling weight,Numeric,Use for teacher-level estimates
+TRWGT1-TRWGT100,Original replicate weights,100 teacher replicate weights,Numeric,For Fay BRR variance estimation
+TT4G20A-TT4G20J,Original,Professional-learning activity participation items,Integer,Used to audit routing-based SEN_PL recode
