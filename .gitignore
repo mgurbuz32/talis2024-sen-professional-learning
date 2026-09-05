@@ -1,0 +1,19 @@
+# Raw and individual-level data must never be committed
+data/raw/
+data/derived/
+*.rds
+*.RDS
+*.sav
+*.zsav
+*.dta
+*.sas7bdat
+*.csv.gz
+
+# R/session files
+.Rhistory
+.RData
+.Rproj.user/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
