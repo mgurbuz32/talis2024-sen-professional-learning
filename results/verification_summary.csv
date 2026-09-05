@@ -1,0 +1,6 @@
+analysis,N,systems,B,CI_low,CI_high,I2,notes
+Primary SEN-focused PL association,117303,55,0.793,0.726,0.860,84.3,"Adjusted for teaching experience, target-class size, SEN concentration in target class, and questionnaire form"
+High-need subgroup SEN-focused PL association,116627,55,0.784,0.697,0.871,61.3,"Profile-analysis sample; subgroup contrast estimated within high-need teachers"
+General self-efficacy sensitivity,117208,55,0.621,0.565,0.677,81.25,"Primary model plus T4SELF"
+Gender+education restricted-sample baseline,22598,18,0.930,,, ,"Primary covariates in systems with jointly available gender and education"
+Gender+education restricted-sample adjusted,22598,18,0.931,,, ,"Adds gender and highest educational attainment"
