@@ -1,6 +1,6 @@
 # TALIS 2024: SEN-focused professional learning and teacher self-efficacy
 
-Reproducibility materials for the manuscript **“Professional Learning and Teachers' Self-Efficacy for Educating Students with Special Education Needs Across 55 Education Systems.”**
+Reproducibility materials for the manuscript **“Professional Learning and Teachers' Self-Efficacy for Educating Students with Special Education Needs Across 54 Education Systems.”**
 
 **Author:** Mehmet Gürbüz  
 Department of Special Education, Faculty of Education, Uşak University, Türkiye  
@@ -8,19 +8,19 @@ ORCID: https://orcid.org/0000-0003-2811-9946
 
 ## Overview
 
-This repository contains the analysis code, variable documentation, and aggregate verification outputs for a cross-national secondary analysis of the OECD Teaching and Learning International Survey (TALIS) 2024. The study examines the association between professional learning focused on teaching students with special education needs (SEN) and teachers' SEN-specific self-efficacy across 55 education systems.
+This repository contains analysis code, variable documentation, and aggregate verification outputs for a cross-national secondary analysis of OECD TALIS 2024. The study examines the association between professional learning focused on teaching students with special education needs (SEN) and teachers' SEN-specific self-efficacy.
 
-The primary analytic sample contains 117,303 lower-secondary (ISCED 2) teachers assigned to TALIS teacher questionnaire Forms B or C with complete data for the primary outcome, focal predictor, and prespecified covariates. A professional-learning need/participation analysis uses 116,627 teachers.
+The primary analytic sample contains **114,140 lower-secondary teachers in 54 non-overlapping education systems**. The national Belgium aggregate is excluded because it combines the same Flemish- and French-Community teacher records that are represented separately; retaining all three would violate independence of the meta-analytic units. The four-profile professional-learning need/participation analysis contains 113,482 teachers; 30,415 report high SEN-related professional-learning need.
 
 ## Data access
 
-**The individual-level TALIS 2024 public-use data are not redistributed in this repository.** Users must obtain the TALIS 2024 R public-use teacher file directly from the OECD and place `ttgintt4.rds` in:
+**Individual-level TALIS 2024 public-use data are not redistributed in this repository.** Users must obtain the TALIS 2024 public-use teacher data directly from OECD. For the R workflow, place `ttgintt4.rds` at:
 
 ```text
 data/raw/ttgintt4.rds
 ```
 
-The repository `.gitignore` excludes `data/raw/` and common individual-level data formats to reduce the risk of accidental redistribution.
+The repository `.gitignore` excludes `data/raw/`, derived individual-level data, and common microdata formats to reduce the risk of accidental redistribution.
 
 ## Reproduction workflow
 
@@ -37,62 +37,48 @@ R/06_sensitivity_analyses.R
 R/07_figures_tables.R
 ```
 
-The scripts implement:
+The scripts implement restriction to ISCED Level 2 and Forms B/C, routing-aware coding of `TT4G21K`, exclusion of the overlapping national Belgium aggregate, final teacher weights (`TCHWGT`), 100 teacher replicate weights (`TRWGT1`–`TRWGT100`), Fay-BRR variance estimation (Fay = 0.50), education-system-specific weighted regressions, REML random-effects synthesis, need × participation analyses, and robustness checks.
 
-- restriction to ISCED Level 2 and questionnaire Forms B/C;
-- routing-aware coding of SEN-focused professional learning (`SEN_PL`);
-- final teacher weights (`TCHWGT`);
-- 100 TALIS teacher replicate weights (`TRWGT1`–`TRWGT100`);
-- Fay balanced repeated replication with Fay coefficient 0.50;
-- education-system-specific weighted regressions;
-- REML random-effects synthesis of system-specific coefficients;
-- professional-learning need × participation analyses;
-- robustness checks reported in the manuscript;
-- aggregate tables and the forest plot.
-
-## Main analysis variables
+## Main variables
 
 | Role | TALIS variable | Description |
 |---|---|---|
 | Outcome | `T4SESEN` | Self-efficacy in special education needs |
-| Main predictor | `TT4G21K` / derived `SEN_PL` | SEN-focused professional learning during the previous 12 months |
-| Professional-learning need | `TT4G24K` | Current need for professional learning in teaching students with SEN |
+| Main predictor | `TT4G21K` / `SEN_PL` | SEN-focused professional learning in previous 12 months |
+| Professional-learning need | `TT4G24K` | Current need for learning in teaching students with SEN |
 | Covariate | `T4TYEXPTT` | Total teaching-experience category |
 | Covariate | `T4TCSIZE` | Target-class size category |
-| Covariate | `TT4G47E` | SEN concentration/category in the target class |
+| Covariate | `TT4G47E` | SEN concentration in target class |
 | Survey form | `IDTQUEST` | Teacher questionnaire form |
 | Final weight | `TCHWGT` | Final teacher sampling weight |
-| Replicate weights | `TRWGT1`–`TRWGT100` | Teacher replicate weights for Fay-BRR variance estimation |
-
-See `codebook/analysis_variables.csv` for the full analysis codebook.
+| Replicate weights | `TRWGT1`–`TRWGT100` | Teacher replicate weights |
 
 ## Routing-aware professional-learning coding
 
-`TT4G21K` is retained unchanged in the local analysis-ready data. The derived binary variable `SEN_PL` is coded as:
+The original `TT4G21K` variable is retained unchanged. Derived `SEN_PL` is coded 1 for `TT4G21K = Yes`, 0 for `TT4G21K = No`, and 0 when `TT4G21K` is structurally missing because all preceding professional-learning activity items indicate no participation. Other missing values remain missing.
 
-- `1`: `TT4G21K = 1` (Yes);
-- `0`: `TT4G21K = 2` (No);
-- `0`: `TT4G21K` is structurally missing because all professional-learning activity items `TT4G20A`–`TT4G20J` indicate no participation;
-- missing otherwise.
+## Main verification results
 
-This distinction prevents questionnaire-routing missingness from being treated as ordinary item nonresponse.
+Primary 54-system random-effects synthesis:
 
-## Aggregate verification results
+- N = 114,140
+- B = 0.798
+- 95% CI [0.731, 0.866]
+- I² = 84.0%
+- 95% prediction interval [0.344, 1.253]
 
-The `results/` directory contains only aggregate outputs and does **not** contain individual-level TALIS records. The primary pooled association reported in the manuscript is approximately `B = 0.793` (95% CI [0.726, 0.860]), with substantial cross-system heterogeneity (`I² ≈ 84.3%`).
+High-need subgroup:
 
-## Software
+- N = 30,415
+- B = 0.791
+- 95% CI [0.703, 0.878]
 
-The scripts are written for R and use common CRAN packages including `dplyr`, `readr`, `purrr`, `tibble`, `haven`, `metafor`, and `ggplot2`. Run `R/00_setup.R` first; it checks required packages and defines the Fay-BRR helper functions used throughout the workflow.
-
-## Reproducibility and versioning
-
-The aggregate CSV files in `results/` are supplied as verification targets. Re-running the workflow from the OECD public-use file should reproduce these outputs subject to ordinary numerical rounding and package-version differences.
+The pooled `SEN_PL × high need` interaction is small and non-significant (B = 0.016, 95% CI [-0.067, 0.099]), providing no evidence that high current need moderates the association. A leave-one-system-out analysis yields pooled estimates from 0.785 to 0.806. Excluding systems with Poor or Insufficient teacher-sample adjudication leaves 48 systems and produces B = 0.817 (95% CI [0.747, 0.887]).
 
 ## License
 
-Analysis code and original repository documentation are released under the MIT License. The OECD TALIS data remain subject to the OECD's own terms and are **not** covered by this repository license.
+Analysis code and repository documentation are released under the MIT License. OECD TALIS data remain subject to OECD's terms and are not covered by this repository license.
 
 ## Citation
 
-Please cite the associated manuscript when available. Repository citation metadata are provided in `CITATION.cff`.
+Please cite the associated manuscript when available. Repository citation metadata are in `CITATION.cff`.
