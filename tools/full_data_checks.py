@@ -13,7 +13,6 @@ OUT.mkdir(exist_ok=True)
 def find_csv():
     with zipfile.ZipFile(ZIP) as z:
         names = [n for n in z.namelist() if n.lower().endswith('.csv')]
-        # Prefer the combined international teacher file, not a questionnaire-form file.
         exact = [n for n in names if Path(n).name.lower() == 'ttgintt4.csv']
         if exact:
             target = exact[0]
@@ -96,12 +95,14 @@ def rem_meta(y, se):
 
 def weighted_alpha(d, items):
     dd = d[items + ['TCHWGT']].dropna()
-    if len(dd) < 50: return np.nan, len(dd)
+    if len(dd) < 50:
+        return np.nan, len(dd)
     X = dd[items].to_numpy(float); w = dd.TCHWGT.to_numpy(float); w = w / w.sum()
     mu = np.sum(X * w[:, None], axis=0)
     C = (X - mu).T @ ((X - mu) * w[:, None])
     k = len(items); total = C.sum()
-    if total <= 0: return np.nan, len(dd)
+    if total <= 0:
+        return np.nan, len(dd)
     return float(k / (k - 1) * (1 - np.trace(C) / total)), len(dd)
 
 
@@ -112,7 +113,6 @@ required += [f'TT4G31{x}' for x in 'ABCDEF']
 required += [f'TRWGT{i}' for i in range(1, 101)]
 head = pd.read_csv(csv_path, sep=sep, encoding='utf-8-sig', nrows=0)
 head.columns = head.columns.astype(str).str.strip().str.strip('"')
-print('First columns:', head.columns[:20].tolist(), flush=True)
 missing = [c for c in required if c not in head.columns]
 print('Missing requested columns:', missing, flush=True)
 core_required = ['CNTRY','IDTQUEST','T4SESEN','TT4G21K','TT4G24K','T4TYEXPTT','T4TCSIZE','TT4G47E','TCHWGT'] + [f'TT4G20{x}' for x in 'ABCDEFGHIJ'] + [f'TRWGT{i}' for i in range(1,101)]
@@ -120,57 +120,92 @@ missing_core = [c for c in core_required if c not in head.columns]
 if missing_core:
     raise RuntimeError('Core variables missing: ' + ', '.join(missing_core))
 use = [c for c in required if c in head.columns]
-d = pd.read_csv(csv_path, sep=sep, encoding='utf-8-sig', usecols=use, low_memory=False)
-for c in use: d[c] = num(d[c])
-if 'IDPOP' in d.columns: d = d[d.IDPOP.eq(2)].copy()
+d = pd.read_csv(csv_path, sep=sep, encoding='utf-8-sig', usecols=use, low_memory=False, dtype={'CNTRY':'string'})
+d['CNTRY'] = d['CNTRY'].astype('string').str.strip().str.strip('"')
+for c in use:
+    if c != 'CNTRY':
+        d[c] = num(d[c])
+
+# Restrict to lower-secondary teachers and Forms B/C.
+if 'IDPOP' in d.columns:
+    d = d[d.IDPOP.eq(2)].copy()
 d = d[d.IDTQUEST.isin([2,3])].copy()
-for c in ['T4TYEXPTT','T4TCSIZE']: d[c] = valid_cat(d[c], [1,2,3,4])
+
+# Convert special/non-substantive codes to missing. Categorical valid ranges match
+# the TALIS 2024 public-use coding. Derived self-efficacy scales are positive and
+# far below 50; the broad interval below retains substantive scores while dropping
+# negative/very large special missing codes in the CSV release.
+d['T4SESEN'] = num(d['T4SESEN']).where(num(d['T4SESEN']).between(0, 50, inclusive='both'))
+if 'T4SELF' in d.columns:
+    d['T4SELF'] = num(d['T4SELF']).where(num(d['T4SELF']).between(0, 50, inclusive='both'))
+for c in ['T4TYEXPTT','T4TCSIZE']:
+    d[c] = valid_cat(d[c], [1,2,3,4])
 d['TT4G47E'] = valid_cat(d['TT4G47E'], list(range(1,8)))
 d['TT4G21K'] = valid_cat(d['TT4G21K'], [1,2])
 d['TT4G24K'] = valid_cat(d['TT4G24K'], [1,2,3,4])
-for c in [f'TT4G20{x}' for x in 'ABCDEFGHIJ']: d[c] = valid_cat(d[c], [1,2,3,4])
+for c in [f'TT4G20{x}' for x in 'ABCDEFGHIJ']:
+    d[c] = valid_cat(d[c], [1,2,3,4])
 for c in [f'TT4G31{x}' for x in 'ABCDEF']:
-    if c in d.columns: d[c] = valid_cat(d[c], [1,2,3,4])
-if 'TT4G01' in d.columns: d['TT4G01'] = d['TT4G01'].where(d['TT4G01'].between(1,4))
-if 'T4THEDAT' in d.columns: d['T4THEDAT'] = d['T4THEDAT'].where(d['T4THEDAT'].between(1,20))
+    if c in d.columns:
+        d[c] = valid_cat(d[c], [1,2,3,4])
+if 'TT4G01' in d.columns:
+    d['TT4G01'] = valid_cat(d['TT4G01'], [1,2,3,4])
+if 'T4THEDAT' in d.columns:
+    d['T4THEDAT'] = num(d['T4THEDAT']).where(num(d['T4THEDAT']).between(1,20))
+d['TCHWGT'] = num(d['TCHWGT']).where(num(d['TCHWGT']) > 0)
+for r in range(1,101):
+    c = f'TRWGT{r}'
+    d[c] = num(d[c]).where(num(d[c]) > 0)
 
 plitems = [f'TT4G20{x}' for x in 'ABCDEFGHIJ']
 all_no = d[plitems].notna().all(axis=1) & (d[plitems] == 4).all(axis=1)
 d['SEN_PL'] = np.select([d.TT4G21K.eq(1), d.TT4G21K.eq(2), d.TT4G21K.isna() & all_no], [1,0,0], default=np.nan)
 d['HIGH'] = np.where(d.TT4G24K.eq(4), 1, np.where(d.TT4G24K.isin([1,2,3]), 0, np.nan))
 
-# Keep non-overlapping units: exclude the national Belgium aggregate.
+# Exclude the national Belgium aggregate because it duplicates the teachers
+# represented separately in the Flemish and French Communities.
 base = d[d.CNTRY.ne('BEL')].copy()
-primary = base.dropna(subset=['T4SESEN','SEN_PL','T4TYEXPTT','T4TCSIZE','TT4G47E','IDTQUEST']).copy()
+primary = base.dropna(subset=['T4SESEN','SEN_PL','T4TYEXPTT','T4TCSIZE','TT4G47E','IDTQUEST','TCHWGT'] + [f'TRWGT{i}' for i in range(1,101)]).copy()
 print('Primary N', len(primary), 'systems', primary.CNTRY.nunique(), flush=True)
 summary = {'primary_N': int(len(primary)), 'systems': int(primary.CNTRY.nunique())}
 
+# 1) General self-efficacy sensitivity.
 if 'T4SELF' in primary.columns:
     pself = primary.dropna(subset=['T4SELF']).copy(); rows = []
     for code, g in pself.groupby('CNTRY'):
         b, se = system_brr(g, ['T4SELF']); rows.append((code, len(g), b, se))
     rr = pd.DataFrame(rows, columns=['CNTRY','N','B','SE']); rr.to_csv(OUT/'t4self_system.csv', index=False)
-    summary['T4SELF_N'] = int(len(pself)); summary['T4SELF_meta'] = rem_meta(rr.B, rr.SE)
+    summary['T4SELF_N'] = int(len(pself)); summary['T4SELF_systems'] = int(rr.shape[0]); summary['T4SELF_meta'] = rem_meta(rr.B, rr.SE)
 
+# 2) Gender + highest-education restricted-sample sensitivity.
 if {'TT4G01','T4THEDAT'}.issubset(primary.columns):
-    ge = primary.dropna(subset=['TT4G01','T4THEDAT']).copy(); counts = ge.groupby('CNTRY').size(); ge = ge[ge.CNTRY.isin(counts[counts >= 50].index)]
+    ge = primary.dropna(subset=['TT4G01','T4THEDAT']).copy()
+    counts = ge.groupby('CNTRY').size(); ge = ge[ge.CNTRY.isin(counts[counts >= 50].index)]
     r0=[]; r1=[]
     for code, g in ge.groupby('CNTRY'):
-        if g.TT4G01.nunique() < 2 or g.T4THEDAT.nunique() < 2: continue
-        b,se=system_brr(g); r0.append((code,len(g),b,se)); b,se=system_brr(g,['TT4G01','T4THEDAT']); r1.append((code,len(g),b,se))
-    r0=pd.DataFrame(r0,columns=['CNTRY','N','B','SE']); r1=pd.DataFrame(r1,columns=['CNTRY','N','B','SE']); common=set(r0.CNTRY)&set(r1.CNTRY); r0=r0[r0.CNTRY.isin(common)]; r1=r1[r1.CNTRY.isin(common)]
+        if g.TT4G01.nunique() < 2 or g.T4THEDAT.nunique() < 2:
+            continue
+        b,se=system_brr(g); r0.append((code,len(g),b,se))
+        b,se=system_brr(g,['TT4G01','T4THEDAT']); r1.append((code,len(g),b,se))
+    r0=pd.DataFrame(r0,columns=['CNTRY','N','B','SE']); r1=pd.DataFrame(r1,columns=['CNTRY','N','B','SE'])
+    common=set(r0.CNTRY)&set(r1.CNTRY); r0=r0[r0.CNTRY.isin(common)]; r1=r1[r1.CNTRY.isin(common)]
     r0.to_csv(OUT/'gender_education_primary.csv',index=False); r1.to_csv(OUT/'gender_education_adjusted.csv',index=False)
-    summary['gender_education_N']=int(ge[ge.CNTRY.isin(common)].shape[0]); summary['gender_education_systems']=len(common); summary['gender_education_primary_meta']=rem_meta(r0.B,r0.SE); summary['gender_education_adjusted_meta']=rem_meta(r1.B,r1.SE)
+    summary['gender_education_N']=int(ge[ge.CNTRY.isin(common)].shape[0]); summary['gender_education_systems']=len(common)
+    summary['gender_education_primary_meta']=rem_meta(r0.B,r0.SE); summary['gender_education_adjusted_meta']=rem_meta(r1.B,r1.SE)
 
+# 3) System-specific internal consistency of the six T4SESEN source items.
 items=[f'TT4G31{x}' for x in 'ABCDEF']
 if all(c in base.columns for c in items):
     alphas=[]
     for code,g in base.groupby('CNTRY'):
         a,n=weighted_alpha(g,items); alphas.append((code,n,a))
-    a=pd.DataFrame(alphas,columns=['CNTRY','complete_item_N','weighted_alpha']); a.to_csv(OUT/'t4sesen_reliability_by_system.csv',index=False); valid=a.weighted_alpha.dropna(); summary['alpha_summary']={'systems':int(valid.size),'min':float(valid.min()),'median':float(valid.median()),'max':float(valid.max())}
+    a=pd.DataFrame(alphas,columns=['CNTRY','complete_item_N','weighted_alpha']); a.to_csv(OUT/'t4sesen_reliability_by_system.csv',index=False)
+    valid=a.weighted_alpha.dropna()
+    summary['alpha_summary']={'systems':int(valid.size),'min':float(valid.min()),'median':float(valid.median()),'max':float(valid.max()),'mean':float(valid.mean())}
 
 if 'ADJRT24' in base.columns:
     adj=base.groupby('CNTRY')['ADJRT24'].agg(lambda x: sorted(pd.Series(x.dropna().unique()).tolist())).reset_index(); adj.to_csv(OUT/'adjrt24_by_system.csv',index=False)
 
-with open(OUT/'full_data_checks.json','w') as f: json.dump(summary,f,indent=2)
+with open(OUT/'full_data_checks.json','w') as f:
+    json.dump(summary,f,indent=2)
 print(json.dumps(summary, indent=2), flush=True)
