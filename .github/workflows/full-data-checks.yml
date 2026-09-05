@@ -19,7 +19,22 @@ jobs:
       - name: Install Python dependencies
         run: pip install numpy pandas scipy
       - name: Download OECD TALIS 2024 teacher CSV archive
-        run: curl -L --retry 5 --retry-delay 5 -o TALIS2024_teachers_NoESE_CSV.zip https://webfs.oecd.org/talis/2024/core/TALIS2024_teachers_NoESE_CSV.zip
+        run: |
+          python - <<'PY'
+          import urllib.request, time
+          url='https://webfs.oecd.org/talis/2024/core/TALIS2024_teachers_NoESE_CSV.zip'
+          out='TALIS2024_teachers_NoESE_CSV.zip'
+          req=urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+          with urllib.request.urlopen(req, timeout=120) as r, open(out,'wb') as f:
+              total=int(r.headers.get('Content-Length') or 0); got=0; last=0
+              while True:
+                  chunk=r.read(1024*1024)
+                  if not chunk: break
+                  f.write(chunk); got += len(chunk)
+                  if got-last >= 20*1024*1024:
+                      print(f'downloaded {got/1024/1024:.1f} MB of {total/1024/1024:.1f} MB', flush=True); last=got
+          print('download complete', got, flush=True)
+          PY
       - name: Run full-data checks
         run: python tools/full_data_checks.py
       - name: Upload aggregate outputs only
