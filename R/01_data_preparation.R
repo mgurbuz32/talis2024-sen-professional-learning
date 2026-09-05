@@ -24,9 +24,12 @@ if (length(missing_core) > 0) {
   stop("Required variables missing from the teacher file: ", paste(missing_core, collapse = ", "))
 }
 
-# Restrict to the lower-secondary target population and rotated Forms B/C.
+# Restrict to lower-secondary teachers and rotated Forms B/C. The national
+# Belgium aggregate (BEL) is excluded because it combines the same Flemish
+# and French Community teacher records that are also represented separately;
+# retaining all three would violate independence of meta-analytic units.
 eligible <- raw %>%
-  filter(IDPOP == 2, IDTQUEST %in% c(2, 3)) %>%
+  filter(IDPOP == 2, IDTQUEST %in% c(2, 3), CNTRY != "BEL") %>%
   left_join(lookup, by = c("CNTRY" = "Code")) %>%
   rename(EDU_SYSTEM_NAME = `Education system`)
 
@@ -65,7 +68,7 @@ eligible <- eligible %>%
 # Eligible outcome sample used as denominator for system-specific retention.
 eligible_outcome <- eligible %>% filter(!is.na(T4SESEN))
 
-# Primary analytic sample: complete on outcome, focal exposure, and prespecified
+# Primary analytic sample: complete on outcome, focal exposure, and specified
 # teacher/classroom covariates. Planned Form-A non-administration is already
 # handled by the B/C restriction above.
 primary <- eligible_outcome %>%
@@ -77,7 +80,8 @@ primary <- eligible_outcome %>%
   )
 
 # Retain sensitivity-analysis variables if supplied in the PUF.
-optional_vars <- intersect(c("T4SELF", "TT4G01", "T4THEDAT"), names(primary))
+optional_vars <- intersect(c("T4SELF", "TT4G01", "T4THEDAT", "ADJRT24",
+                             paste0("TT4G31", LETTERS[1:6])), names(primary))
 keep_vars <- unique(c(
   needed_core,
   "EDU_SYSTEM_NAME", "SEN_PL", "SEN_PL_ROUTED_ZERO", "HIGH_SEN_PL_NEED",
@@ -102,6 +106,7 @@ retention <- eligible_outcome %>%
 readr::write_csv(retention, "results/system_retention.csv")
 
 cat("Primary analytic N:", nrow(primary), "\n")
-cat("Education systems:", dplyr::n_distinct(primary$CNTRY), "\n")
+cat("Non-overlapping education systems:", dplyr::n_distinct(primary$CNTRY), "\n")
 cat("Need/profile eligible N:", sum(primary$NEED_PROFILE_ELIGIBLE == 1, na.rm = TRUE), "\n")
+cat("High-need N:", sum(primary$HIGH_SEN_PL_NEED == 1, na.rm = TRUE), "\n")
 cat("Routing-based SEN_PL zero recodes retained:", sum(primary$SEN_PL_ROUTED_ZERO == 1, na.rm = TRUE), "\n")
