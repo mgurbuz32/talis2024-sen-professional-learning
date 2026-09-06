@@ -63,6 +63,7 @@ Primary 54-system random-effects synthesis:
 
 - N = 114,140
 - B = 0.798
+- SE = 0.034
 - 95% CI [0.731, 0.866]
 - I² = 84.0%
 - 95% prediction interval [0.344, 1.253]
@@ -73,7 +74,18 @@ High-need subgroup:
 - B = 0.791
 - 95% CI [0.703, 0.878]
 
-The pooled `SEN_PL × high need` interaction is small and non-significant (B = 0.016, 95% CI [-0.067, 0.099]), providing no evidence that high current need moderates the association. A leave-one-system-out analysis yields pooled estimates from 0.785 to 0.806. Excluding systems with Poor or Insufficient teacher-sample adjudication leaves 48 systems and produces B = 0.817 (95% CI [0.747, 0.887]).
+The pooled `SEN_PL × high need` interaction was small and non-significant (B = 0.016, 95% CI [-0.067, 0.099]).
+
+### Robustness checks
+
+- **General teacher self-efficacy:** after adding `T4SELF`, N = 114,047 and the pooled coefficient remained positive (B = 0.625, 95% CI [0.568, 0.682], I² = 81.2%).
+- **Gender and educational attainment:** in the 18-system restricted sample (N = 22,598), B = 0.930 with the primary covariates and B = 0.931 after adding gender and highest educational attainment.
+- **Teacher-data adjudication:** retaining only education systems rated Good or Fair yielded 48 systems (N = 108,347) and B = 0.817 (95% CI [0.747, 0.887]).
+- **Leave-one-system-out:** pooled coefficients ranged from 0.785 to 0.806.
+- **Ceiling-effect diagnostic:** neither the Pearson nor Spearman association between system mean T4SESEN and the system-specific coefficient supported a simple ceiling-effect explanation.
+- **T4SESEN source-item reliability:** design-weighted Cronbach alpha across the 54 systems ranged from 0.782 to 0.940 (median = 0.862; mean = 0.863). These coefficients describe internal consistency and are not a test of cross-system measurement invariance.
+
+Rounded manuscript-level targets are also provided in `results/verification_summary.csv`.
 
 ## License
 
